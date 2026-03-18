@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>음악 플레이리스트 타임라인 마스터</title>
+    <style>
+        /* 기본 초기화 및 폰트 설정 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+            background-color: #f5f5f5;
+            color: #333333;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        /* 메인 컨테이너 */
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 800px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        
+        /* 파일 업로드 영역 (드래그 앤 드롭) */
+        .upload-area {
+            border: 2px dashed #cccccc;
+            border-radius: 12px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #fafafa;
+            position: relative;
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #FF0000;
+            background-color: #fff5f5;
+        }
+        .upload-area p {
+            font-size: 16px;
+            color: #666666;
+            pointer-events: none;
+            font-weight: 500;
+        }
+        .upload-area input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        /* 트랙 리스트 영역 */
+        .track-list-container {
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid #eeeeee;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .track-list {
+            list-style: none;
+        }
+        .track-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #eeeeee;
+            background-color: #ffffff;
+            transition: background-color 0.2s;
+        }
+        .track-item:last-child {
+            border-bottom: none;
+        }
+        .track-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        /* 파일명 입력창 */
+        .track-name-input {
+            flex-grow: 1;
+            border: 1px solid transparent;
+            padding: 8px 12px;
+            font-size: 15px;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s, background-color 0.2s;
+            font-family: inherit;
+            background-color: transparent;
+        }
+        .track-name-input:focus {
+            border-color: #FF0000;
+            background-color: #ffffff;
+        }
+        
+        /* 재생 시간 표시 */
+        .track-duration {
+            font-size: 14px;
+            color: #888888;
+            margin: 0 16px;
+            font-variant-numeric: tabular-nums;
+            min-width: 45px;
+            text-align: right;
+        }
+        
+        /* 삭제 버튼 */
+        .delete-btn {
+            background-color: transparent;
+            border: 1px solid #dddddd;
+            color: #666666;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .delete-btn:hover {
+            background-color: #ffeeee;
+            border-color: #FF0000;
+            color: #FF0000;
+        }
+        
+        /* 빈 상태 메시지 */
+        .empty-msg {
+            padding: 40px;
+            text-align: center;
+            color: #999999;
+            font-size: 15px;
+        }
+
+        /* 결과 출력 영역 */
+        .result-area {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .result-area label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #444444;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 16px;
+            border: 1px solid #dddddd;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 15px;
+            line-height: 1.6;
+            outline: none;
+            background-color: #fafafa;
+            color: #333333;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            border-color: #FF0000;
+            background-color: #ffffff;
+        }
+        
+        /* 복사 버튼 */
+        .copy-btn {
+            background-color: #FF0000;
+            color: #ffffff;
+            border: none;
+            padding: 16px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .copy-btn:hover {
+            background-color: #cc0000;
+        }
+        .copy-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* 복사 완료 툴팁 */
+        .tooltip {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background-color: #333333;
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 500;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, transform 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .tooltip.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* 스크롤바 스타일링 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cccccc;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #aaaaaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>음악 플레이리스트 타임라인 마스터</h1>
+        
+        <!-- 파일 업로드 영역 -->
+        <div class="upload-area" id="uploadArea">
+            <p>이곳에 음악 파일들을 끌어다 놓거나 클릭하여 추가하세요</p>
+            <input type="file" id="fileInput" accept="audio/*" multiple>
+        </div>
+
+        <!-- 트랙 리스트 영역 -->
+        <div class="track-list-container">
+            <ul class="track-list" id="trackList">
+                <li class="empty-msg" id="emptyMsg">추가된 음악 파일이 없습니다.</li>
+            </ul>
+        </div>
+
+        <!-- 결과 출력 영역 -->
+        <div class="result-area">
+            <label for="resultTextarea">타임라인 결과</label>
+            <textarea id="resultTextarea" readonly placeholder="파일을 추가하면 타임라인이 이곳에 자동 생성됩니다."></textarea>
+        </div>
+
+        <!-- 클립보드 복사 버튼 -->
+        <button class="copy-btn" id="copyBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            전체 텍스트 복사하기
+        </button>
+    </div>
+
+    <!-- 복사 완료 알림 툴팁 -->
+    <div class="tooltip" id="tooltip">복사되었습니다!</div>
+
+    <script>
+        // 음악 트랙 정보를 담을 상태 배열
+        let tracks = [];
+
+        // DOM 요소 선택
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const trackList = document.getElementById('trackList');
+        const emptyMsg = document.getElementById('emptyMsg');
+        const resultTextarea = document.getElementById('resultTextarea');
+        const copyBtn = document.getElementById('copyBtn');
+        const tooltip = document.getElementById('tooltip');
+
+        // 드래그 앤 드롭 이벤트 처리
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        // 파일 클릭 업로드 이벤트 처리
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+            // 동일한 파일을 다시 선택할 수 있도록 input 값 초기화
+            fileInput.value = '';
+        });
+
+        // 파일 처리 메인 함수
+        async function handleFiles(files) {
+            // 오디오 파일만 필터링
+            const audioFiles = Array.from(files).filter(file => file.type.startsWith('audio/'));
+            
+            if (audioFiles.length === 0) {
+                alert('오디오 파일만 추가할 수 있습니다.');
+                return;
+            }
+
+            for (const file of audioFiles) {
+                // 정규표현식을 사용하여 확장자 제거 (예: .mp3, .wav)
+                const cleanName = file.name.replace(/\.[^/.]+$/, "");
+                
+                // 오디오 길이(초) 추출
+                const duration = await getAudioDuration(file);
+                
+                // 고유 ID 생성
+                const id = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+                
+                tracks.push({
+                    id: id,
+                    name: cleanName,
+                    duration: duration
+                });
+            }
+            
+            // 파일 이름(name) 기준 오름차순 정렬
+            tracks.sort((a, b) => a.name.localeCompare(b.name));
+            
+            renderTrackList();
+            calculateTimeline();
+        }
+
+        // 오디오 파일의 재생 길이를 추출하는 함수 (Promise 반환)
+        function getAudioDuration(file) {
+            return new Promise((resolve) => {
+                const objectUrl = URL.createObjectURL(file);
+                const audio = new Audio(objectUrl);
+                
+                audio.addEventListener('loadedmetadata', () => {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(audio.duration);
+                });
+                
+                audio.addEventListener('error', () => {
+                    URL.revokeObjectURL(objectUrl);
+                    resolve(0); // 에러 발생 시 0초로 기본값 처리
+                });
+            });
+        }
+
+        // 초(seconds)를 MM:SS 또는 HH:MM:SS 포맷으로 변환하는 함수
+        function formatTime(totalSeconds) {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+
+            const paddedMinutes = String(minutes).padStart(2, '0');
+            const paddedSeconds = String(seconds).padStart(2, '0');
+
+            if (hours > 0) {
+                const paddedHours = String(hours).padStart(2, '0');
+                return `${paddedHours}:${paddedMinutes}:${paddedSeconds}`;
+            }
+            return `${paddedMinutes}:${paddedSeconds}`;
+        }
+
+        // 트랙 리스트를 화면에 렌더링하는 함수
+        function renderTrackList() {
+            // 기존 리스트 초기화
+            trackList.innerHTML = '';
+            
+            if (tracks.length === 0) {
+                trackList.appendChild(emptyMsg);
+                emptyMsg.style.display = 'block';
+                return;
+            }
+            
+            emptyMsg.style.display = 'none';
+
+            tracks.forEach((track, index) => {
+                const li = document.createElement('li');
+                li.className = 'track-item';
+                
+                // 파일명 수정 입력창
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'track-name-input';
+                input.value = track.name;
+                input.addEventListener('input', (e) => {
+                    tracks[index].name = e.target.value;
+                    calculateTimeline(); // 이름 변경 시 타임라인 즉시 재계산
+                });
+
+                // 재생 시간 텍스트
+                const durationSpan = document.createElement('span');
+                durationSpan.className = 'track-duration';
+                durationSpan.textContent = formatTime(track.duration);
+
+                // 삭제 버튼
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '삭제';
+                deleteBtn.addEventListener('click', () => {
+                    tracks.splice(index, 1);
+                    renderTrackList();
+                    calculateTimeline(); // 삭제 시 타임라인 즉시 재계산
+                });
+
+                li.appendChild(input);
+                li.appendChild(durationSpan);
+                li.appendChild(deleteBtn);
+                trackList.appendChild(li);
+            });
+        }
+
+        // 타임라인을 계산하고 텍스트 영역에 출력하는 함수
+        function calculateTimeline() {
+            if (tracks.length === 0) {
+                resultTextarea.value = '';
+                return;
+            }
+
+            let currentTotalSeconds = 0;
+            let resultText = '';
+            
+            // 귀여운 이모티콘 배열
+            const emojis = ['🎵', '🎶', '🎧', '💿', '🎸', '🎹', '✨', '💖'];
+
+            tracks.forEach((track, index) => {
+                // 인덱스에 맞춰 이모티콘 순환 선택
+                const emoji = emojis[index % emojis.length];
+                
+                // 현재 누적 시간을 포맷팅하여 시작 시간으로 설정
+                const startTime = formatTime(currentTotalSeconds);
+                resultText += `${emoji} ${startTime} ${track.name}\n`;
+                
+                // 다음 트랙을 위해 현재 트랙의 재생 시간을 누적
+                currentTotalSeconds += track.duration;
+            });
+
+            // 마지막 줄바꿈 제거 후 출력
+            resultTextarea.value = resultText.trim();
+        }
+
+        // 클립보드 복사 이벤트 처리
+        copyBtn.addEventListener('click', async () => {
+            const text = resultTextarea.value;
+            if (!text) {
+                alert('복사할 타임라인이 없습니다.');
+                return;
+            }
+
+            try {
+                // 최신 클립보드 API 사용
+                await navigator.clipboard.writeText(text);
+                showTooltip();
+            } catch (err) {
+                // 클립보드 API를 지원하지 않는 환경을 위한 폴백(Fallback)
+                resultTextarea.select();
+                document.execCommand('copy');
+                showTooltip();
+            }
+        });
+
+        // 복사 완료 툴팁 표시 함수
+        function showTooltip() {
+            tooltip.classList.add('show');
+            setTimeout(() => {
+                tooltip.classList.remove('show');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
